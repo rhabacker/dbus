@@ -93,6 +93,8 @@ typedef enum
 
 /** The verbose interface exported by the dbus-daemon */
 #define DBUS_INTERFACE_VERBOSE        "org.freedesktop.DBus.Verbose"
+/** The embedded tests interface exported by the dbus-daemon */
+#define DBUS_INTERFACE_EMBEDDED_TESTS "org.freedesktop.DBus.EmbeddedTests"
 /** The interface supported by introspectable objects */
 #define DBUS_INTERFACE_INTROSPECTABLE "org.freedesktop.DBus.Introspectable"
 /** The interface supported by objects with properties */

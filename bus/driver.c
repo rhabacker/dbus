@@ -2236,6 +2236,43 @@ bus_driver_handle_disable_verbose (DBusConnection *connection,
 }
 #endif
 
+#ifdef DBUS_ENABLE_EMBEDDED_TESTS
+static dbus_bool_t
+bus_driver_handle_shutdown (DBusConnection *connection,
+                            BusTransaction *transaction,
+                            DBusMessage    *message,
+                            DBusError      *error)
+{
+    BusContext *context = NULL;
+    DBusMessage *reply = NULL;
+
+    _DBUS_ASSERT_ERROR_IS_CLEAR (error);
+
+    reply = dbus_message_new_method_return (message);
+    if (reply == NULL)
+      goto oom;
+
+    if (! bus_transaction_send_from_driver (transaction, connection, reply))
+      goto oom;
+
+    context = bus_connection_get_context (connection);
+    _dbus_loop_request_exit (bus_context_get_loop (context));
+    _dbus_verbose ("Got shutdown request - quit event loop\n");
+
+    dbus_message_unref (reply);
+    return TRUE;
+
+   oom:
+    _DBUS_ASSERT_ERROR_IS_CLEAR (error);
+
+    BUS_SET_OOM (error);
+
+    if (reply)
+      dbus_message_unref (reply);
+    return FALSE;
+}
+#endif
+
 static dbus_bool_t
 bus_driver_handle_get_id (DBusConnection *connection,
                           BusTransaction *transaction,
@@ -2688,6 +2725,14 @@ static const MessageHandler verbose_message_handlers[] = {
 };
 #endif
 
+#ifdef DBUS_ENABLE_EMBEDDED_TESTS
+static const MessageHandler verbose_embedded_tests_handlers[] = {
+  { "Shutdown", "", "", bus_driver_handle_shutdown,
+    METHOD_FLAG_PRIVILEGED },
+  { NULL, NULL, NULL, NULL }
+};
+#endif
+
 #ifdef DBUS_ENABLE_STATS
 static const MessageHandler stats_message_handlers[] = {
   { "GetStats", "", "a{sv}", bus_stats_handle_get_stats,
@@ -2772,6 +2817,10 @@ static InterfaceHandler interface_handlers[] = {
     INTERFACE_FLAG_NONE },
 #ifdef DBUS_ENABLE_VERBOSE_MODE
   { DBUS_INTERFACE_VERBOSE, verbose_message_handlers, NULL,
+    INTERFACE_FLAG_NONE },
+#endif
+#ifdef DBUS_ENABLE_EMBEDDED_TESTS
+  { DBUS_INTERFACE_EMBEDDED_TESTS, verbose_embedded_tests_handlers, NULL,
     INTERFACE_FLAG_NONE },
 #endif
 #ifdef DBUS_ENABLE_STATS

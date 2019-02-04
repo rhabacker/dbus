@@ -1836,6 +1836,7 @@ check_interfaces (DBusMessageIter *var_iter)
   gboolean have_monitoring = FALSE;
   gboolean have_stats = FALSE;
   gboolean have_verbose = FALSE;
+  gboolean have_embedded_tests = FALSE;
 
   g_assert_cmpint (dbus_message_iter_get_arg_type (var_iter), ==,
       DBUS_TYPE_ARRAY);
@@ -1863,7 +1864,10 @@ check_interfaces (DBusMessageIter *var_iter)
         have_stats = TRUE;
       else if (g_strcmp0 (iface, DBUS_INTERFACE_VERBOSE) == 0)
         have_verbose = TRUE;
-
+#ifdef DBUS_ENABLE_EMBEDDED_TESTS
+      else if (g_strcmp0 (iface, DBUS_INTERFACE_EMBEDDED_TESTS) == 0)
+        have_embedded_tests = TRUE;
+#endif
       dbus_message_iter_next (&arr_iter);
     }
 
@@ -1879,6 +1883,12 @@ check_interfaces (DBusMessageIter *var_iter)
   g_assert_true (have_verbose);
 #else
   g_assert_false (have_verbose);
+#endif
+
+#ifdef DBUS_ENABLE_EMBEDDED_TESTS
+  g_assert_true (have_embedded_tests);
+#else
+  g_assert_false (have_embedded_tests);
 #endif
 }
 
