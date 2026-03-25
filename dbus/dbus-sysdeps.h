@@ -653,6 +653,12 @@ void _dbus_logv (DBusSystemLogSeverity  severity,
  */
 #define _DBUS_DOUBLES_BITWISE_EQUAL(a, b) (memcmp (&(a), &(b), sizeof (double)) == 0)
 
+DBUS_PRIVATE_EXPORT
+dbus_bool_t _dbus_daemon_lock_autolaunch_address (void);
+DBUS_PRIVATE_EXPORT
+dbus_bool_t _dbus_daemon_try_lock_autolaunch_address (int timeout_msec);
+DBUS_PRIVATE_EXPORT
+void _dbus_daemon_unlock_autolaunch_address (void);
 dbus_bool_t _dbus_get_autolaunch_address (const char *scope,
                                           DBusString *address,
 					                      DBusError  *error);

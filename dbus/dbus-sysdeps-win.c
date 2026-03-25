@@ -2943,10 +2943,83 @@ _dbus_get_mutex_name (DBusString *out, const char *scope)
   return _dbus_get_address_string (out, cDBusDaemonMutex, scope);
 }
 
+void _dbus_autolaunch_lock_shutdown (void);
+
+static DBusRMutex *autolaunch_lock = NULL;
+
+static DBusRMutex *
+_dbus_get_autolaunch_lock_internal (void)
+{
+  _dbus_threads_lock_platform_specific ();
+
+  if (autolaunch_lock == NULL)
+      autolaunch_lock = _dbus_win_rmutex_named_new (cUniqueDBusInitMutex);
+
+  _dbus_threads_unlock_platform_specific ();
+
+  return autolaunch_lock;
+}
+
+void
+_dbus_autolaunch_lock_shutdown (void)
+{
+  _dbus_threads_lock_platform_specific ();
+
+  if (autolaunch_lock)
+    {
+      _dbus_platform_rmutex_free (autolaunch_lock);
+      autolaunch_lock = NULL;
+    }
+
+  _dbus_threads_unlock_platform_specific ();
+}
+
+dbus_bool_t
+_dbus_daemon_lock_autolaunch_address (void)
+{
+  DBusRMutex *lock;
+
+  lock = _dbus_get_autolaunch_lock_internal ();
+
+  if (lock == NULL)
+    return FALSE;
+
+  _dbus_platform_rmutex_lock (lock);
+
+  return TRUE;
+}
+
+dbus_bool_t
+_dbus_daemon_try_lock_autolaunch_address (int timeout_msec)
+{
+    DBusRMutex *lock;
+
+    lock = _dbus_get_autolaunch_lock_internal ();
+
+    if (lock == NULL)
+      return FALSE;
+
+    return _dbus_platform_rmutex_try_lock(lock, timeout_msec);
+}
+
+void
+_dbus_daemon_unlock_autolaunch_address (void)
+{
+  DBusRMutex *lock;
+
+  _dbus_threads_lock_platform_specific ();
+  lock = autolaunch_lock;
+  _dbus_threads_unlock_platform_specific ();
+
+  if (lock != NULL)
+    {
+      _dbus_platform_rmutex_unlock (lock);
+    }
+}
+
 dbus_bool_t
 _dbus_daemon_is_session_bus_address_published (const char *scope)
 {
-  DBusRMutex *lock = NULL;
   DBusString mutex_name;
 
   if (!_dbus_string_init (&mutex_name))
@@ -2966,12 +3039,16 @@ _dbus_daemon_is_session_bus_address_published (const char *scope)
       _dbus_verbose ("(scope:%s) -> yes\n", scope);
       return TRUE;
     }
-  lock = _dbus_win_rmutex_named_new (cUniqueDBusInitMutex);
-  if (!lock)
-    return FALSE;
 
-  // sync _dbus_daemon_publish_session_bus_address, _dbus_daemon_unpublish_session_bus_address and _dbus_daemon_already_runs
-  _dbus_platform_rmutex_lock (lock);
+  /* sync _dbus_daemon_publish_session_bus_address,
+    _dbus_daemon_unpublish_session_bus_address,
+    _dbus_daemon_is_session_bus_address_published
+    and _dbus_daemon_already_runs  */
+  if (!_dbus_daemon_lock_autolaunch_address ())
+    {
+      _dbus_string_free (&mutex_name);
+      return FALSE;
+    }
 
   // we use CreateMutex instead of OpenMutex because of possible race conditions,
   // see http://msdn.microsoft.com/en-us/library/ms684315%28VS.85%29.aspx
@@ -2981,8 +3058,7 @@ _dbus_daemon_is_session_bus_address_published (const char *scope)
      Fortunally the client deletes the mutex in the lock protected area, so checking presence 
      will work too.  */
 
-  _dbus_platform_rmutex_unlock (lock);
-  _dbus_platform_rmutex_free (lock);
+  _dbus_daemon_unlock_autolaunch_address ();
 
   _dbus_string_free (&mutex_name);
 
@@ -3008,7 +3084,6 @@ _dbus_daemon_is_session_bus_address_published (const char *scope)
 dbus_bool_t
 _dbus_daemon_publish_session_bus_address (const char* address, const char *scope)
 {
-  DBusRMutex *lock = NULL;
   char *shared_addr = NULL;
   DBusString shm_name  = _DBUS_STRING_INIT_INVALID;
   DBusString mutex_name;
@@ -3029,15 +3104,15 @@ _dbus_daemon_publish_session_bus_address (const char* address, const char *scope
       return FALSE;
     }
 
-  // sync _dbus_daemon_publish_session_bus_address, _dbus_daemon_unpublish_session_bus_address and _dbus_daemon_already_runs
-  lock = _dbus_win_rmutex_named_new (cUniqueDBusInitMutex);
-  if (lock == NULL)
+  /* sync _dbus_daemon_publish_session_bus_address,
+    _dbus_daemon_unpublish_session_bus_address,
+    _dbus_daemon_is_session_bus_address_published
+    and _dbus_daemon_already_runs  */
+  if (!_dbus_daemon_lock_autolaunch_address ())
     {
       _dbus_string_free (&mutex_name);
       return FALSE;
     }
-
-  _dbus_platform_rmutex_lock (lock);
 
   if (!hDBusDaemonMutex)
     {
@@ -3085,8 +3160,7 @@ _dbus_daemon_publish_session_bus_address (const char* address, const char *scope
   retval = TRUE;
 
 out:
-  _dbus_platform_rmutex_unlock (lock);
-  _dbus_platform_rmutex_free (lock);
+  _dbus_daemon_unlock_autolaunch_address ();
   _dbus_string_free (&shm_name);
   return retval;
 }
@@ -3111,28 +3185,29 @@ out:
 dbus_bool_t
 _dbus_daemon_unpublish_session_bus_address (void)
 {
-  DBusRMutex *lock = NULL;
-
   _dbus_verbose ("\n");
-  // sync _dbus_daemon_publish_session_bus_address, _dbus_daemon_unpublish_session_bus_address and _dbus_daemon_already_runs
-  lock = _dbus_win_rmutex_named_new (cUniqueDBusInitMutex);
-  if (lock == NULL)
+
+  /* sync _dbus_daemon_publish_session_bus_address,
+    _dbus_daemon_unpublish_session_bus_address,
+    _dbus_daemon_is_session_bus_address_published
+    and _dbus_daemon_already_runs  */
+  if (!_dbus_daemon_lock_autolaunch_address ())
     return FALSE;
 
-  _dbus_platform_rmutex_lock (lock);
+  if (hDBusSharedMem != NULL)
+    {
+      CloseHandle (hDBusSharedMem);
+      hDBusSharedMem = NULL;
+    }
 
-  CloseHandle (hDBusSharedMem);
+  if (hDBusDaemonMutex != NULL)
+    {
+      ReleaseMutex (hDBusDaemonMutex);
+      CloseHandle (hDBusDaemonMutex);
+      hDBusDaemonMutex = NULL;
+    }
 
-  hDBusSharedMem = NULL;
-
-  ReleaseMutex (hDBusDaemonMutex);
-
-  CloseHandle (hDBusDaemonMutex);
-
-  hDBusDaemonMutex = NULL;
-
-  _dbus_platform_rmutex_unlock (lock);
-  _dbus_platform_rmutex_free (lock);
+  _dbus_daemon_unlock_autolaunch_address ();
   return TRUE;
 }
 
@@ -3204,11 +3279,11 @@ _dbus_daemon_already_runs (DBusString *address, DBusString *shm_name, const char
     }
 
   // sync _dbus_daemon_publish_session_bus_address, _dbus_daemon_unpublish_session_bus_address and _dbus_daemon_already_runs
-  lock = _dbus_win_rmutex_named_new (cUniqueDBusInitMutex);
-  if (lock == NULL)
-    return FALSE;
-
-  _dbus_platform_rmutex_lock (lock);
+  if (!_dbus_daemon_lock_autolaunch_address ())
+    {
+      _dbus_string_free (&mutex_name);
+      return FALSE;
+    }
 
   // do checks
   daemon = CreateMutexA (NULL, FALSE, _dbus_string_get_const_data (&mutex_name));
@@ -3226,8 +3301,7 @@ _dbus_daemon_already_runs (DBusString *address, DBusString *shm_name, const char
   CloseHandle (daemon);
 
 out:
-  _dbus_platform_rmutex_unlock (lock);
-  _dbus_platform_rmutex_free (lock);
+  _dbus_daemon_unlock_autolaunch_address ();
   _dbus_string_free (&mutex_name);
 
   return retval;

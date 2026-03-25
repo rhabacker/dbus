@@ -179,6 +179,18 @@ _dbus_platform_rmutex_lock (DBusRMutex *mutex)
                      result == WAIT_ABANDONED);
 }
 
+dbus_bool_t
+_dbus_platform_rmutex_try_lock (DBusRMutex *mutex,
+                                int         timeout_msec)
+{
+  DWORD result = WaitForSingleObject ((HANDLE) mutex, timeout_msec);
+
+  if (result == WAIT_OBJECT_0 || result == WAIT_ABANDONED)
+    return TRUE;
+
+  return FALSE;
+}
+
 void
 _dbus_platform_cmutex_unlock (DBusCMutex *mutex)
 {

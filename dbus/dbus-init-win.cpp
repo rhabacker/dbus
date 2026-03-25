@@ -30,12 +30,19 @@ extern "C"
 #include "dbus-init-win.h"
 }
 
+extern "C" void _dbus_autolaunch_lock_shutdown(void);
+
 class DBusInternalInit
   {
     public:
       DBusInternalInit ()
         {
           _dbus_threads_windows_init_global ();
+        }
+
+      ~DBusInternalInit()
+        {
+          _dbus_autolaunch_lock_shutdown ();
         }
 
       void must_not_be_omitted ()

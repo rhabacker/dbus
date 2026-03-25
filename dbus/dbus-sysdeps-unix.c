@@ -4817,6 +4817,23 @@ _dbus_daemon_unpublish_session_bus_address (void)
   return TRUE;
 }
 
+dbus_bool_t
+_dbus_daemon_lock_autolaunch_address (void)
+{
+  return TRUE;
+}
+
+dbus_bool_t
+_dbus_daemon_try_lock_autolaunch_address (int)
+{
+  return TRUE;
+}
+
+void
+_dbus_daemon_unlock_autolaunch_address (void)
+{
+}
+
 /**
  * See if errno is EAGAIN or EWOULDBLOCK (this has to be done differently
  * for Winsock so is abstracted)

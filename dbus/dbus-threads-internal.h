@@ -107,6 +107,10 @@ void         _dbus_platform_rmutex_free      (DBusRMutex       *mutex);
 DBUS_EMBEDDED_TESTS_EXPORT
 void         _dbus_platform_rmutex_lock      (DBusRMutex       *mutex);
 
+DBUS_EMBEDDED_TESTS_EXPORT
+dbus_bool_t  _dbus_platform_rmutex_try_lock   (DBusRMutex       *mutex,
+                                               int              timeout_msec);
+
 /**
  * Release a recursively usable mutex
  *
