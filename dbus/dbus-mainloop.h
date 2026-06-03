@@ -55,6 +55,7 @@ dbus_bool_t _dbus_loop_queue_dispatch (DBusLoop            *loop,
 
 void        _dbus_loop_run            (DBusLoop            *loop);
 void        _dbus_loop_quit           (DBusLoop            *loop);
+void        _dbus_loop_request_exit   (DBusLoop            *loop);
 dbus_bool_t _dbus_loop_iterate        (DBusLoop            *loop,
                                        dbus_bool_t          block);
 dbus_bool_t _dbus_loop_dispatch       (DBusLoop            *loop);

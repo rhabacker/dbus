@@ -52,6 +52,7 @@ struct DBusLoop
   /** TRUE if we will skip a watch next time because it was OOM; becomes
    * FALSE between polling, and dealing with the results of the poll */
   unsigned oom_watch_pending : 1;
+  unsigned exit_requested : 1;
 };
 
 typedef struct
@@ -874,7 +875,14 @@ _dbus_loop_iterate (DBusLoop     *loop,
 
   if (_dbus_loop_dispatch (loop))
     retval = TRUE;
-  
+
+  if (loop->exit_requested)
+    {
+      loop->exit_requested = FALSE;
+      _dbus_loop_quit (loop);
+      retval = TRUE;
+    }
+
 #if MAINLOOP_SPEW
   _dbus_verbose ("Returning %d\n", retval);
 #endif
@@ -912,6 +920,12 @@ _dbus_loop_quit (DBusLoop *loop)
 
   _dbus_verbose ("Quit main loop, depth %d -> %d\n",
                  loop->depth + 1, loop->depth);
+}
+
+void
+_dbus_loop_request_exit (DBusLoop *loop)
+{
+  loop->exit_requested = TRUE;
 }
 
 int
