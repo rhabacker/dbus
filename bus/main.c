@@ -172,6 +172,7 @@ usage (void)
 #ifdef DBUS_WIN
       " [--ready-event-handle=value]"
       " [--verbose]"
+      " [--auto-shutdown]"
 #endif
 #ifdef DBUS_UNIX
       " [--fork]"
@@ -409,6 +410,9 @@ main (int argc, char **argv)
   int i;
   dbus_bool_t print_address;
   dbus_bool_t print_pid;
+#ifdef DBUS_WIN
+  dbus_bool_t auto_shutdown;
+#endif
   BusContextFlags flags;
   void *ready_event_handle;
 
@@ -453,6 +457,9 @@ main (int argc, char **argv)
 
   print_address = FALSE;
   print_pid = FALSE;
+#ifdef DBUS_WIN
+  auto_shutdown = FALSE;
+#endif
 
   flags = BUS_CONTEXT_FLAG_WRITE_PID_FILE;
 
@@ -626,6 +633,10 @@ main (int argc, char **argv)
         {
           _dbus_set_verbose(TRUE);
         }
+      else if (strcmp (arg, "--auto-shutdown") == 0)
+        {
+          auto_shutdown = TRUE;
+        }
 #endif
       else if (prev_arg &&
                strcmp (prev_arg, "--print-address") == 0)
@@ -733,6 +744,11 @@ main (int argc, char **argv)
       dbus_error_free (&error);
       exit (1);
     }
+
+#ifdef DBUS_WIN
+  _dbus_verbose ("auto shutdown %s\n", auto_shutdown ? "enabled" : "disabled");
+  bus_context_set_auto_shutdown_enabled (context, auto_shutdown);
+#endif
 
   /* bus_context_new() closes the print_addr_pipe and
    * print_pid_pipe

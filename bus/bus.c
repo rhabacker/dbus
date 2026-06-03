@@ -48,6 +48,7 @@
 #include <dbus/dbus-credentials.h>
 #include <dbus/dbus-internals.h>
 #include <dbus/dbus-server-protected.h>
+#include <dbus/dbus-sysdeps.h>
 
 #ifdef DBUS_CYGWIN
 #include <signal.h>
@@ -83,6 +84,8 @@ struct BusContext
   unsigned int quiet_log : 1;
 #endif
   dbus_bool_t watches_enabled;
+  dbus_bool_t auto_shutdown_enabled;
+  dbus_bool_t shutting_down;
 };
 
 static dbus_int32_t server_data_slot = -1;
@@ -187,6 +190,12 @@ dbus_bool_t
 bus_context_add_incoming_connection (BusContext *context,
                                      DBusConnection *new_connection)
 {
+  if (context->shutting_down)
+    {
+      dbus_connection_close (new_connection);
+      return FALSE;
+    }
+
   /* If this fails it logs a warning, so we don't need to do that */
   if (!bus_connections_setup_connection (context->connections, new_connection))
     {
@@ -895,6 +904,8 @@ bus_context_new (const DBusString *config_file,
 
       _dbus_string_free (&addr);
     }
+
+  bus_context_set_auto_shutdown_enabled (context, FALSE);
 
 #ifdef DBUS_WIN
   if (ready_event_handle != NULL)
@@ -2035,3 +2046,103 @@ bus_context_get_quiet_log (BusContext *context)
   return context->quiet_log;
 }
 #endif
+
+dbus_bool_t
+bus_context_get_auto_shutdown_enabled (BusContext *context)
+{
+  return context->auto_shutdown_enabled;
+}
+
+void
+bus_context_set_auto_shutdown_enabled (BusContext *context, dbus_bool_t state)
+{
+  context->auto_shutdown_enabled = state;
+}
+
+void bus_context_begin_shutdown (BusContext *context)
+{
+  DBusList *link;
+
+  context->shutting_down = TRUE;
+  context->watches_enabled = FALSE;
+
+  for (link = _dbus_list_get_first_link (&context->servers);
+       link != NULL;
+       link = _dbus_list_get_next_link (&context->servers, link))
+    _dbus_server_toggle_all_watches (link->data, FALSE);
+}
+
+void bus_context_cancel_shutdown (BusContext *context)
+{
+  DBusList *link;
+
+  context->shutting_down = FALSE;
+  context->watches_enabled = TRUE;
+
+  for (link = _dbus_list_get_first_link (&context->servers);
+       link != NULL;
+       link = _dbus_list_get_next_link (&context->servers, link))
+    _dbus_server_toggle_all_watches (link->data, TRUE);
+
+  bus_context_check_all_watches (context);
+}
+
+static
+void bus_context_unpublish_servers_unlocked (BusContext *context)
+{
+  DBusList *link;
+
+  for (link = _dbus_list_get_first_link (&context->servers);
+       link != NULL;
+       link = _dbus_list_get_next_link (&context->servers, link))
+    {
+      DBusServer *server = link->data;
+      if (server->published_address)
+        {
+          if (_dbus_daemon_unpublish_session_bus_address ())
+            server->published_address = FALSE;
+        }
+    }
+}
+
+void bus_context_request_shutdown (BusContext *context, BusShutdownReason reason)
+{
+  BusConnections *connections = bus_context_get_connections (context);
+
+  if (reason == BUS_SHUTDOWN_AUTO &&
+      !bus_context_get_auto_shutdown_enabled (context))
+    return;
+
+  if (reason == BUS_SHUTDOWN_AUTO)
+    {
+      if ((bus_connections_get_n_active (connections) +
+           bus_connections_get_n_incomplete (connections)) != 0)
+        return;  /* There are still clients connected, skip shutdown */
+
+      // the lock is forever
+      if (!_dbus_daemon_try_lock_autolaunch_address (100))
+        {
+          _dbus_verbose ("Could not acquire autolaunch lock; keeping daemon alive\n");
+          return;
+        }
+
+      bus_context_begin_shutdown (context);
+
+      if (bus_connections_get_n_active (connections) != 0 ||
+          bus_connections_get_n_incomplete (connections) != 0)
+        {
+          bus_context_cancel_shutdown (context);
+          _dbus_daemon_unlock_autolaunch_address ();
+          return;
+        }
+
+      bus_context_unpublish_servers_unlocked (context);
+      _dbus_daemon_unlock_autolaunch_address ();
+      _dbus_loop_request_exit (bus_context_get_loop (context));
+    }
+  else if (reason == BUS_SHUTDOWN_EMBEDDED_TEST)
+    {
+      bus_context_begin_shutdown (context);
+      _dbus_loop_request_exit (bus_context_get_loop (context));
+    }
+}

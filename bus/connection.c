@@ -347,7 +347,9 @@ bus_connection_disconnected (DBusConnection *connection)
     }
 
   bus_connection_drop_pending_replies (d->connections, connection);
-  
+
+  bus_context_request_shutdown (d->connections->context, BUS_SHUTDOWN_AUTO);
+
   /* frees "d" as side effect */
   dbus_connection_set_data (connection,
                             connection_data_slot,

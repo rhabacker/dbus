@@ -86,6 +86,12 @@ typedef enum
   BUS_CONTEXT_FLAG_SYSLOG_ONLY = (1 << 7)
 } BusContextFlags;
 
+typedef enum
+{
+  BUS_SHUTDOWN_AUTO,
+  BUS_SHUTDOWN_EMBEDDED_TEST,
+} BusShutdownReason;
+
 BusContext*       bus_context_new                                (const DBusString *config_file,
                                                                   BusContextFlags   flags,
                                                                   DBusPipe         *print_addr_pipe,
@@ -163,7 +169,13 @@ dbus_bool_t       bus_context_setup_server                       (BusContext    
                                                                   DBusError        *error);
 dbus_bool_t       bus_context_add_incoming_connection            (BusContext       *context,
                                                                   DBusConnection   *new_connection);
-
+dbus_bool_t       bus_context_get_auto_shutdown_enabled          (BusContext       *context);
+void              bus_context_set_auto_shutdown_enabled          (BusContext       *context,
+                                                                  dbus_bool_t      state);
+void              bus_context_begin_shutdown                     (BusContext       *context);
+void              bus_context_cancel_shutdown                    (BusContext       *context);
+void              bus_context_request_shutdown                   (BusContext       *context,
+                                                                  BusShutdownReason reason);
 #ifdef DBUS_ENABLE_EMBEDDED_TESTS
 void              bus_context_quiet_log_begin                    (BusContext *context);
 void              bus_context_quiet_log_end                      (BusContext *context);

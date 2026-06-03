@@ -3425,6 +3425,12 @@ _dbus_get_autolaunch_address (const char *scope,
       goto out;
     }
 
+  if (!_dbus_string_append_printf (&dbus_args, " \"--auto-shutdown\""))
+    {
+      _DBUS_SET_OOM (error);
+      goto out;
+    }
+
   _dbus_verbose ("Starting dbus daemon with args: '%s'\n", _dbus_string_get_const_data (&dbus_args));
   if (CreateProcessA (dbus_exe_path, _dbus_string_get_data (&dbus_args), NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi))
     {

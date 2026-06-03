@@ -33,6 +33,7 @@
     <arg choice='opt'>--syslog </arg>
     <arg choice='opt'>--syslog-only </arg>
     <arg choice='opt'>--ready-event-handle=value</arg>
+    <arg choice='opt'>--auto-shutdown</arg>
     <sbr/>
 </cmdsynopsis>
 </refsynopsisdiv>
@@ -221,7 +222,13 @@ files.</para>
     </listitem>
   </varlistentry>
 
-
+  <varlistentry>
+    <term><option>--auto-shutdown</option></term>
+    <listitem>
+      <para>Enable the dbus daemon to shutdown after last client disconnects.
+      This option is actual only supported under Windows.</para>
+   </listitem>
+  </varlistentry>
 
 </variablelist>
 </refsect1>
