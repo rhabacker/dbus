@@ -190,9 +190,12 @@ dbus_bool_t
 bus_context_add_incoming_connection (BusContext *context,
                                      DBusConnection *new_connection)
 {
+  _dbus_verbose ("**** got new connection\n");
   if (context->shutting_down)
     {
-      dbus_connection_close (new_connection);
+      _dbus_verbose ("**** in shutdown mode\n");
+      bus_context_cancel_shutdown (context);
+      //dbus_connection_close (new_connection);
       return FALSE;
     }
 
@@ -2063,6 +2066,8 @@ void bus_context_begin_shutdown (BusContext *context)
 {
   DBusList *link;
 
+  _dbus_verbose ("****** Begin auto shutdown\n");
+
   context->shutting_down = TRUE;
   context->watches_enabled = FALSE;
 
@@ -2075,6 +2080,8 @@ void bus_context_begin_shutdown (BusContext *context)
 void bus_context_cancel_shutdown (BusContext *context)
 {
   DBusList *link;
+
+  _dbus_verbose ("****** Cancelling auto shutdown\n");
 
   context->shutting_down = FALSE;
   context->watches_enabled = TRUE;
@@ -2117,8 +2124,12 @@ void bus_context_request_shutdown (BusContext *context, BusShutdownReason reason
     {
       if ((bus_connections_get_n_active (connections) +
            bus_connections_get_n_incomplete (connections)) != 0)
-        return;  /* There are still clients connected, skip shutdown */
+        {
+          _dbus_verbose ("Request to shutdown skipped as there are still connections\n");
+          return;  /* There are still clients connected, skip shutdown */
+      }
 
+      _dbus_verbose ("Got request to shutdown\n");
       // the lock is forever
       if (!_dbus_daemon_try_lock_autolaunch_address (100))
         {
@@ -2133,12 +2144,14 @@ void bus_context_request_shutdown (BusContext *context, BusShutdownReason reason
         {
           bus_context_cancel_shutdown (context);
           _dbus_daemon_unlock_autolaunch_address ();
+          _dbus_verbose ("Cancelled request to shutdown\n");
           return;
         }
 
       bus_context_unpublish_servers_unlocked (context);
       _dbus_daemon_unlock_autolaunch_address ();
       _dbus_loop_request_exit (bus_context_get_loop (context));
+      _dbus_verbose ("Finished request to shutdown\n");
     }
   else if (reason == BUS_SHUTDOWN_EMBEDDED_TEST)
     {
