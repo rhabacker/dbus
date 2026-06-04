@@ -3188,7 +3188,6 @@ out:
 static dbus_bool_t
 _dbus_daemon_already_runs (DBusString *address, DBusString *shm_name, const char *scope)
 {
-  DBusRMutex *lock = NULL;
   HANDLE daemon;
   DBusString mutex_name;
   dbus_bool_t retval = FALSE;
