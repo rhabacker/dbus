@@ -171,6 +171,7 @@ usage (void)
       " [--nofork]"
 #ifdef DBUS_WIN
       " [--ready-event-handle=value]"
+      " [--verbose]"
 #endif
 #ifdef DBUS_UNIX
       " [--fork]"
@@ -620,6 +621,10 @@ main (int argc, char **argv)
               fprintf (stderr, "%s specified, but invalid handle provided\n", arg);
               exit (1);
             }
+        }
+      else if (strcmp (arg, "--verbose") == 0)
+        {
+          _dbus_set_verbose(TRUE);
         }
 #endif
       else if (prev_arg &&

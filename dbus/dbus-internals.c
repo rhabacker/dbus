@@ -404,6 +404,7 @@ _dbus_is_verbose_real (void)
 
 void _dbus_set_verbose (dbus_bool_t state)
 {
+    _dbus_verbose_init ();
     verbose = state;
 }
 
