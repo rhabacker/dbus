@@ -230,6 +230,8 @@ run_test (const char *server_scope, const char *scope, const char *test_data_dir
       dbus_setenv ("DBUS_SESSION_BUS_ADDRESS", _dbus_string_get_const_data (&address));
       _dbus_test_diag ("got env %s", getenv ("DBUS_SESSION_BUS_ADDRESS"));
       conn = dbus_bus_get_private (DBUS_BUS_SESSION, &error);
+      if (!conn)
+        _dbus_test_fatal("couldn't access session bus");
       dbus_connection_set_exit_on_disconnect (conn, FALSE);
     }
   else
