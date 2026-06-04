@@ -29,16 +29,11 @@ if intrusive_tests
     ]
 
     if platform_windows
-        autolaunch_name = 'test-autolaunch-win'
+        tests += [ {'name': 'test-autolaunch-win'} ]
+        tests += [ {'name': 'test-server-shutdown'} ]
     else
-        autolaunch_name = 'test-autolaunch'
+        tests += [ {'name': 'test-autolaunch'} ]
     endif
-    autolaunch = executable(autolaunch_name,
-        autolaunch_name + '.c',
-        include_directories: root_include,
-        link_with: [libdbus, libdbus_internal, libdbus_testutils],
-        dependencies: dbus_dependencies
-    )
 
     if use_traditional_activation
         tests += [
