@@ -171,7 +171,12 @@ _dbus_platform_cmutex_lock (DBusCMutex *mutex)
 void
 _dbus_platform_rmutex_lock (DBusRMutex *mutex)
 {
-  THREAD_CHECK_TRUE ("WaitForSingleObject", WaitForSingleObject ((HANDLE *) mutex, INFINITE) == WAIT_OBJECT_0);
+  DWORD result = WaitForSingleObject ((HANDLE) mutex, INFINITE);
+
+  /* Optionally log WAIT_ABANDONED in verbose mode */
+  THREAD_CHECK_TRUE ("WaitForSingleObject",
+                     result == WAIT_OBJECT_0 ||
+                     result == WAIT_ABANDONED);
 }
 
 void
