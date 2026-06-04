@@ -254,7 +254,7 @@ dbus_test_tool_spam (int argc, char **argv)
           for (p = payload_buf; p < payload_buf + payload_len; p += consumed)
             {
               /* the space character matches any (or no) whitespace */
-              if (sscanf (p, " %u %n", &len, &consumed) == 0)
+              if (sscanf (p, " %u %n", &len, &consumed) != 1)
                 break;
 
               n_random_sizes++;
