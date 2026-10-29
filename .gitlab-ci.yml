@@ -55,7 +55,7 @@ variables:
   # If you are hacking on them or need a them to rebuild, its enough
   # to change any part of the string of the image you want.
   ###
-  WINDOWS_TAG: "2026-07-01.0"
+  WINDOWS_TAG: "2026-10-30.0"
 
   UPSTREAM_BRANCH: 'main'
   UPSTREAM_REPO: 'dbus/dbus'
