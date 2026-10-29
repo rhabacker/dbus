@@ -331,6 +331,9 @@ case "$ci_distro" in
         # isn't installed
         getent group messagebus >/dev/null || /usr/sbin/groupadd -r messagebus
         getent passwd messagebus >/dev/null || /usr/sbin/useradd -r -s /usr/bin/false -c "User for D-Bus" -d /run/dbus -g messagebus messagebus
+
+        # The test suite assumes that a group named tty exists
+        getent group tty >/dev/null || /usr/sbin/groupadd -r tty
         ;;
 
     (freebsd*)
