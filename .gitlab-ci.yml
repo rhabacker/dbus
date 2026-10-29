@@ -34,7 +34,7 @@ include:
       - '/templates/freebsd.yml'
       - '/templates/opensuse.yml'
 
-image: debian:bookworm-slim
+image: debian:trixie-slim
 
 stages:
   - 'build docker'
@@ -68,9 +68,9 @@ variables:
 
 .debian-vars:
   variables:
-    FDO_DISTRIBUTION_VERSION: 'bookworm-slim'
+    FDO_DISTRIBUTION_VERSION: 'trixie-slim'
     # Bump this version on every ci-install.sh or dist version change
-    FDO_DISTRIBUTION_TAG: "2025-02-27.0-$UPSTREAM_BRANCH"
+    FDO_DISTRIBUTION_TAG: "2026-10-30.1-$UPSTREAM_BRANCH"
 
 .opensuse-vars:
   variables:
