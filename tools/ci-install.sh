@@ -293,7 +293,7 @@ case "$ci_distro" in
         $sudo pkg upgrade -y
         packages=(
             bash
-            cmake
+            cmake-core
             docbook-xml
             docbook-xsl
             expat
