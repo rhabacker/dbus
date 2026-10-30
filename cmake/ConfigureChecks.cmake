@@ -144,10 +144,13 @@ elseif(SIZEOF___INT64 EQUAL 8)
 else(SIZEOF_INT EQUAL 8)
     message(FATAL_ERROR "Could not find a 64-bit integer type")
 endif()
+message("int64 type detected as ${DBUS_INT64_TYPE}")
+message("int64 printf modifier detected as ${DBUS_INT64_MODIFIER}")
 
 # MSVCRT.dll printf() doesn't support %lld
 if(WIN32 AND NOT CYGWIN)
     set(DBUS_INT64_MODIFIER  "I64")
+    message("int64 printf modifier overridden to ${DBUS_INT64_MODIFIER}")
 endif()
 
 # DBUS_INT32_TYPE

@@ -289,14 +289,17 @@ foreach type : int_types
         error('Could not find a 64-bit integer type.')
     endif
     if type.get('size') == 8
+        message('int64 type detected as @0@'.format(type.get('type')))
         arch_config.set('DBUS_INT64_TYPE', type.get('type'))
         arch_config.set('DBUS_INT64_CONSTANT', type.get('type_c'))
         arch_config.set('DBUS_UINT64_CONSTANT', type.get('type_u_c'))
         if platform_windows
           # MSVCRT.dll printf() doesn't support %lld
           arch_config.set('DBUS_INT64_MODIFIER', 'I64')
+          message('int64 printf modifier overridden to I64')
         else
           arch_config.set('DBUS_INT64_MODIFIER', type.get('type_m'))
+          message('int64 printf modifier detected as @0@'.format(type.get('type_m')))
         endif
         break
     endif
